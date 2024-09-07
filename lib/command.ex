@@ -1,4 +1,34 @@
 defmodule Command do
+  def process("BEGIN", state) do
+    new_state = State.push_context(state)
+    IO.puts("OK")
+    new_state
+  end
+
+  def process("COMMIT", state) do
+    case length(state.stack) do
+      1 ->
+        IO.puts("ERR \"No transaction\"")
+        state
+      _ ->
+        new_state = State.merge_context(state)
+        IO.puts("OK")
+        new_state
+    end
+  end
+
+  def process("ROLLBACK", state) do
+    case length(state.stack) do
+      1 ->
+        IO.puts("ERR \"No transaction\"")
+        state
+      _ ->
+        new_state = State.pop_context(state)
+        IO.puts("OK")
+        new_state
+    end
+  end
+
   def process(input, state) do
     case String.split(input) do
       ["SET", key, value] ->
@@ -13,6 +43,9 @@ defmodule Command do
         end
         state
 
+      ["LIST"] ->
+        Utils.print_stack(state)
+        state
       _ ->
         IO.puts("ERR \"Invalid command\"")
         state

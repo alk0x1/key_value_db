@@ -1,9 +1,31 @@
 defmodule State do
+  def init do
+    %{stack: [%{}]}
+  end
+
   def set(state, key, value) do
-    Map.put(state, key, value)
+    [current | rest] = state.stack
+    new_current = Map.put(current, key, value)
+    %{state | stack: [new_current | rest]}
   end
 
   def get(state, key) do
-    Map.get(state, key)
+    [current_map | _] = state[:stack]
+    Map.get(current_map, key)
+  end
+
+  def push_context(state) do
+    %{state | stack: [%{} | state.stack]}
+  end
+
+  def pop_context(state) do
+    [_ | rest] = state.stack
+    %{state | stack: rest}
+  end
+
+  def merge_context(state) do
+    [current, previous | rest] = state.stack
+    new_previous = Map.merge(previous, current)
+    %{state | stack: [new_previous | rest]}
   end
 end

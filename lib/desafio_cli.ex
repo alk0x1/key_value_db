@@ -1,28 +1,25 @@
 defmodule DesafioCli do
   def main(_args) do
-    loop(%{})
+    state = State.init()
+    loop(state)
   end
 
   defp loop(state) do
-    IO.write("> ")
-
-    input = case IO.gets("") do
-      :eof -> :eof
-      input -> String.trim(input)
-    end
-
-    case input do
-      "quit" ->
-        IO.puts("Terminating session")
+    case get_input() do
+      {:error, reason} ->
+        IO.puts("Error: #{reason}")
         :ok
 
-      :eof ->
-        IO.puts("Terminating session")
-        :ok
-
-      _ ->
+      input ->
         new_state = Command.process(input, state)
         loop(new_state)
+    end
+  end
+
+  defp get_input do
+    case IO.gets("> ") do
+      {:error, reason} -> {:error, reason}
+      input when is_binary(input) -> String.trim(input)
     end
   end
 end
