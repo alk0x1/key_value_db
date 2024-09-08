@@ -15,7 +15,7 @@ defmodule DesafioCli do
         :ok
 
       input ->
-        new_state = Command.process(input, state)
+        new_state = CommandRouter.process(input, state)
         maybe_compact_log(new_state)  # Trigger log compaction if needed
         loop(new_state)
     end
