@@ -1,4 +1,6 @@
 defmodule Command do
+  alias Persistence, as: P
+
   def process("BEGIN", state) do
     new_state = State.push_context(state)
     IO.puts("OK")
@@ -10,9 +12,17 @@ defmodule Command do
       1 ->
         IO.puts("ERR \"No transaction\"")
         state
+
       _ ->
+        # Merge the current context into the previous one
         new_state = State.merge_context(state)
         IO.puts("OK")
+
+        # If there's only one map left in the stack, persist the change
+        if length(new_state.stack) == 1 do
+          P.compact_log(new_state)
+        end
+
         new_state
     end
   end
@@ -22,6 +32,7 @@ defmodule Command do
       1 ->
         IO.puts("ERR \"No transaction\"")
         state
+
       _ ->
         new_state = State.pop_context(state)
         IO.puts("OK")
@@ -34,6 +45,12 @@ defmodule Command do
       ["SET", key, value] ->
         new_state = State.set(state, key, Utils.parse_value(value))
         IO.puts("OK")
+
+        # Log only if modifying the first map in the stack (no active transactions)
+        if length(new_state.stack) == 1 do
+          P.log_change({key, Utils.parse_value(value)})
+        end
+
         new_state
 
       ["GET", key] ->
@@ -46,6 +63,7 @@ defmodule Command do
       ["LIST"] ->
         Utils.print_stack(state)
         state
+
       _ ->
         IO.puts("ERR \"Invalid command\"")
         state
