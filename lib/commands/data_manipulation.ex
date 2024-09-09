@@ -3,41 +3,72 @@ defmodule Commands.DataManipulation do
   alias Persistence, as: P
   alias Utils
 
-  def process(["SET", key, value], state) do
-    new_state = State.set(state, key, Utils.parse_value(value))
-    IO.puts("OK")
+  def process(["SET" | args], state) do
+    case tokenize_args(args) do
+      [key, value] ->
+        parsed_key = Utils.parse_value(key)
+        parsed_value = Utils.parse_value(value)
 
-    if length(new_state.stack) == 1 do
-      P.log_change({key, Utils.parse_value(value)})
+        new_state = Map.update!(state, :stack, fn stack ->
+          [Map.put(List.first(stack), parsed_key, parsed_value) | List.delete_at(stack, 0)]
+        end)
+
+        if length(new_state.stack) == 1 do
+          P.log_change({key, Utils.parse_value(value)})
+        end
+
+        IO.puts("OK")
+
+        new_state
+
+      _ ->
+        IO.puts(~s(ERR "SET <key> <value> - Syntax error"))
+        state
     end
-
-    new_state
   end
 
-  def process(["GET", key], state) do
-    case State.get(state, key) do
-      nil -> IO.puts("NIL")
-      value -> IO.puts(inspect(value))
-    end
+ def process(["GET" | args], state) do
+    case tokenize_args(args) do
+      [key] ->
+        parsed_key = Utils.parse_value(key)
 
-    state
+        case find_in_stack(parsed_key, state.stack) do
+          nil -> IO.puts("NIL")
+          value -> IO.puts("#{value}")
+        end
+
+        state
+
+      _ ->
+        IO.puts(~s(ERR "GET <key> - Syntax error"))
+        state
+    end
   end
 
-  def process("LIST", state) do
+  def process(["LIST"], state) do
     Utils.print_stack(state)
     state
   end
 
-  def process(["SET" | _], state), do: handle_invalid_set(state)
-  def process(["GET" | _], state), do: handle_invalid_get(state)
 
-  defp handle_invalid_set(state) do
-    IO.puts("ERR \"SET <key> <value> - Syntax error\"")
-    state
+  defp tokenize_args(args) do
+    args
+    |> Enum.join(" ")
+    |> tokenize()
   end
 
-  defp handle_invalid_get(state) do
-    IO.puts("ERR \"GET <key> - Syntax error\"")
-    state
+  defp tokenize(string) do
+    regex = ~r/'[^']*'|"[^"]*"|\S+/
+    Regex.scan(regex, string)
+    |> Enum.map(fn [token] -> String.trim(token, ~s('")) end)
+  end
+
+  defp find_in_stack(_key, []), do: nil
+
+  defp find_in_stack(key, [layer | rest]) do
+    case Map.get(layer, key) do
+      nil -> find_in_stack(key, rest)
+      value -> value
+    end
   end
 end
