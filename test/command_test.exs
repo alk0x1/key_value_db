@@ -143,13 +143,13 @@ defmodule CommandTest do
       assert new_state.stack == [%{"key" => "value"}]
 
       log_data = File.read!("state.log")
-      log_entries = Persistence.extract_log_entries(log_data)
+      log_entries = LogManager.extract_log_entries(log_data)
       assert log_entries == [["key", "value"]]
     end)
     assert output == "FALSE value\n"
   end
 
-  test "COMMIT command with persistence", %{state: state} do
+  test "COMMIT command with persistence" do
     state_with_transaction = %{stack: [%{}, %{"key" => "value"}]}
 
     output = capture_io(fn ->
@@ -157,7 +157,7 @@ defmodule CommandTest do
       assert length(new_state.stack) == 1
       assert new_state.stack == [%{"key" => "value"}]
 
-      persisted_state = Persistence.load_full_map()
+      persisted_state = SnapshotManager.load_snapshot()
       assert persisted_state == %{"key" => "value"}
     end)
 
@@ -165,9 +165,9 @@ defmodule CommandTest do
   end
 
   test "GET command retrieves from log", %{state: state} do
-    state = CommandRouter.process("SET key value", state)
+    CommandRouter.process("SET key value", state)
 
-    new_state = %{stack: [Persistence.replay_log(%{})]}
+    new_state = %{stack: [LogManager.replay_log(%{})]}
     output = capture_io(fn ->
       CommandRouter.process("GET key", new_state)
     end)

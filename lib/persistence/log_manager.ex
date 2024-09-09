@@ -18,7 +18,7 @@ defmodule LogManager do
     end
   end
 
-  defp extract_log_entries(log_data) do
+  def extract_log_entries(log_data) do
     log_data
     |> String.split(@separator, trim: true)
     |> Enum.map(& :erlang.binary_to_term/1)
