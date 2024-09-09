@@ -1,42 +1,42 @@
 defmodule Commands.Transaction do
   alias State
-  alias Persistence, as: P
+  alias SnapshotManager
 
   def process("BEGIN", state) do
-    new_state = State.push_context(state)
-    IO.puts(length(new_state.stack) - 1)
-    new_state
+    update_state_stack(:push, state)
   end
 
   def process("COMMIT", state) do
-    case length(state.stack) do
-      1 ->
-        IO.puts("ERR \"No transaction\"")
-        state
-
-      _ ->
-        new_state = State.merge_context(state)
-        IO.puts(length(new_state.stack) - 1)
-
-        if length(new_state.stack) == 1 do
-          P.compact_log(new_state)
-        end
-
-        new_state
+    if length(state.stack) == 1 do
+      IO.puts("ERR \"No transaction\"")
+      state
+    else
+      update_state_stack(:merge, state)
     end
   end
 
   def process("ROLLBACK", state) do
-    case length(state.stack) do
-      1 ->
-        IO.puts("ERR \"No transaction\"")
-        state
-
-      _ ->
-        new_state = State.pop_context(state)
-        IO.puts(length(new_state.stack) - 1)
-
-        new_state
+    if length(state.stack) == 1 do
+      IO.puts("ERR \"No transaction\"")
+      state
+    else
+      update_state_stack(:pop, state)
     end
+  end
+
+  defp update_state_stack(action, state) do
+    new_state = case action do
+      :push -> State.push_context(state)
+      :merge -> State.merge_context(state)
+      :pop -> State.pop_context(state)
+    end
+
+    IO.puts(length(new_state.stack) - 1)
+
+    if action == :merge and length(new_state.stack) == 1 do
+      SnapshotManager.save_snapshot(new_state)
+    end
+
+    new_state
   end
 end

@@ -16,7 +16,7 @@ defmodule DesafioCli do
 
       input ->
         new_state = CommandRouter.process(input, state)
-        maybe_compact_log(new_state)  # Trigger log compaction if log_size > 5
+        maybe_save_snapshot(new_state)  # Trigger log compaction if log_size > 5
         loop(new_state)
     end
   end
@@ -34,12 +34,13 @@ defmodule DesafioCli do
 
     if state_bin_exists do
       IO.puts("Loading state from state.bin...")
-      initial_map = Persistence.load_full_map()
+      initial_map = SnapshotManager.load_snapshot()
 
       # If log exists, replay it over the state.bin data
       if log_exists do
         IO.puts("Replaying log for latest changes...")
-        updated_map = Persistence.replay_log(initial_map)
+        updated_map = LogManager.replay_log(initial_map)
+
         %{stack: [updated_map]}
       else
         %{stack: [initial_map]}
@@ -50,10 +51,10 @@ defmodule DesafioCli do
     end
   end
 
-  def maybe_compact_log(state) do
+  def maybe_save_snapshot(state) do
     if log_size() >= @max_log_size do
-      IO.puts("Compacting log...")
-      Persistence.compact_log(state)
+      IO.puts("Saving Snapshot...")
+      SnapshotManager.compact_log(state)
     end
   end
 
