@@ -1,33 +1,18 @@
 defmodule StateManager do
   @log_file "state.log"
   @bin_file "state.bin"
-  @max_log_size 5
+  @max_log_size 100
 
   alias LogManager
   alias SnapshotManager
   alias State
 
-  # Load the state from binary snapshot and log file
   def load_state do
-    state_bin_exists = File.exists?(@bin_file)
-    log_exists = File.exists?(@log_file)
-
-    cond do
-      state_bin_exists && log_exists ->
-        IO.puts("Loading state from state.bin...")
-        initial_map = SnapshotManager.load_snapshot()
-        IO.puts("Replaying log for latest changes...")
-        updated_map = LogManager.replay_log(initial_map)
-        %{stack: [updated_map]}
-
-      state_bin_exists ->
-        IO.puts("Loading state from state.bin...")
-        initial_map = SnapshotManager.load_snapshot()
-        %{stack: [initial_map]}
-
-      true ->
-        IO.puts("No saved state found, initializing new state...")
-        State.init()
+    case {File.exists?(@bin_file), File.exists?(@log_file)} do
+      {true, true} -> load_from_bin_and_log()
+      {true, false} -> load_from_bin()
+      {false, true} -> load_from_log()
+      {false, false} -> load_new_state()
     end
   end
 
@@ -38,9 +23,34 @@ defmodule StateManager do
     end
   end
 
+  defp load_from_bin_and_log do
+    IO.puts("Loading state from state.bin...")
+    initial_map = SnapshotManager.load_snapshot()
+    IO.puts("Replaying log for latest changes...")
+    updated_map = LogManager.replay_log(initial_map)
+    %{stack: [updated_map]}
+  end
+
+  defp load_from_bin do
+    IO.puts("Loading state from state.bin...")
+    initial_map = SnapshotManager.load_snapshot()
+    %{stack: [initial_map]}
+  end
+
+  defp load_from_log do
+    IO.puts("Loading state from state.log...")
+    map = LogManager.replay_log(%{})
+    %{stack: [map]}
+  end
+
+  defp load_new_state do
+    IO.puts("No saved state found, initializing new state...")
+    State.init()
+  end
+
   defp log_size do
     case File.stat(@log_file) do
-      {:ok, stat} -> stat.size
+      {:ok, %{size: size}} -> size
       {:error, _} -> 0
     end
   end

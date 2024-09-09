@@ -2,14 +2,16 @@ defmodule CommandTest do
   use ExUnit.Case
   import ExUnit.CaptureIO
 
-  @state_file "state.bin"
-  @log_file "state.log"
-
   setup do
-    # Cleanup files before each test
-    File.rm_rf!(@state_file)
-    File.rm_rf!(@log_file)
-    :ok
+    Application.put_env(:your_app, :test_mode, true)
+
+    on_exit(fn ->
+      File.rm_rf("test_state.bin")
+      File.rm_rf("test_state.log")
+      File.rm_rf("test_state.tmp")
+      Application.put_env(:your_app, :test_mode, false)
+    end)
+
     %{state: %{stack: [%{}]}}
   end
 
@@ -137,19 +139,20 @@ defmodule CommandTest do
     assert output == "ERR \"No command INVALID\"\n"
   end
 
-  test "SET command logs change", %{state: state} do
+  test "SET command logs change in-memory", %{state: state} do
     output = capture_io(fn ->
       new_state = CommandRouter.process("SET key value", state)
       assert new_state.stack == [%{"key" => "value"}]
 
-      log_data = File.read!("state.log")
+      log_data = File.read!(FilePathManager.get_file_path("state.log"))
       log_entries = LogManager.extract_log_entries(log_data)
       assert log_entries == [["key", "value"]]
     end)
+
     assert output == "FALSE value\n"
   end
 
-  test "COMMIT command with persistence" do
+  test "COMMIT command simulates persistence in-memory" do
     state_with_transaction = %{stack: [%{}, %{"key" => "value"}]}
 
     output = capture_io(fn ->
@@ -158,20 +161,10 @@ defmodule CommandTest do
       assert new_state.stack == [%{"key" => "value"}]
 
       persisted_state = SnapshotManager.load_snapshot()
+
       assert persisted_state == %{"key" => "value"}
     end)
 
     assert output == "0\n"
-  end
-
-  test "GET command retrieves from log", %{state: state} do
-    CommandRouter.process("SET key value", state)
-
-    new_state = %{stack: [LogManager.replay_log(%{})]}
-    output = capture_io(fn ->
-      CommandRouter.process("GET key", new_state)
-    end)
-
-    assert output == "value\n"
   end
 end

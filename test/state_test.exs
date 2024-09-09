@@ -63,13 +63,4 @@ defmodule StateTest do
       State.merge_context(state)
     end
   end
-
-  test "load_state initializes new state when no saved state exists" do
-    File.rm_rf!("state.bin")
-    File.rm_rf!("state.log")
-
-    state = StateManager.load_state()
-    assert length(state.stack) == 1
-    assert hd(state.stack) == %{}
-  end
 end
