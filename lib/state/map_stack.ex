@@ -27,5 +27,7 @@ defmodule State do
     [current, previous | rest] = state.stack
     new_previous = Map.merge(previous, current)
     %{state | stack: [new_previous | rest]}
+  rescue
+    MatchError -> raise "Cannot merge context: there must be at least two contexts in the stack"
   end
 end

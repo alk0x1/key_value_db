@@ -1,8 +1,6 @@
 defmodule StateTest do
   use ExUnit.Case
 
-  alias State
-
   test "initializes with a single empty map" do
     state = State.init()
     assert length(state.stack) == 1
@@ -39,5 +37,39 @@ defmodule StateTest do
     assert length(state.stack) == 1
     assert State.get(state, "foo") == 10
     assert State.get(state, "bar") == 20
+  end
+
+  test "get returns nil for non-existing key" do
+    state = State.init()
+    assert State.get(state, "non_existing_key") == nil
+  end
+
+  test "set overwrites existing value" do
+    state = State.init()
+    state = State.set(state, "foo", 10)
+    state = State.set(state, "foo", 20)
+    assert State.get(state, "foo") == 20
+  end
+
+  test "pop_context does not remove the last context" do
+    state = State.init()
+    state = State.pop_context(state)
+    assert length(state.stack) == 0
+  end
+
+  test "merge_context raises an error when there is only one context" do
+    state = State.init()
+    assert_raise RuntimeError, "Cannot merge context: there must be at least two contexts in the stack", fn ->
+      State.merge_context(state)
+    end
+  end
+
+  test "load_state initializes new state when no saved state exists" do
+    File.rm_rf!("state.bin")
+    File.rm_rf!("state.log")
+
+    state = StateManager.load_state()
+    assert length(state.stack) == 1
+    assert hd(state.stack) == %{}
   end
 end
