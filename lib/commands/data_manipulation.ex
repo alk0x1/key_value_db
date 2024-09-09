@@ -17,7 +17,9 @@ defmodule Commands.DataManipulation do
           P.log_change({key, Utils.parse_value(value)})
         end
 
-        IO.puts("OK")
+        # Only check if the key exist in the current state
+        [current_state | _] = state.stack
+        IO.puts("#{if Map.has_key?(current_state, parsed_key), do: "TRUE", else: "FALSE"} #{parsed_value}")
 
         new_state
 

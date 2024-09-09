@@ -16,7 +16,7 @@ defmodule DesafioCli do
 
       input ->
         new_state = CommandRouter.process(input, state)
-        maybe_compact_log(new_state)  # Trigger log compaction if needed
+        maybe_compact_log(new_state)  # Trigger log compaction if log_size > 5
         loop(new_state)
     end
   end

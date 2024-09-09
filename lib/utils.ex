@@ -22,7 +22,7 @@ defmodule Utils do
     IO.puts("Current state stack:")
 
     Enum.with_index(state.stack, fn map, index ->
-      IO.puts("Layer #{index + 1}: #{inspect(map)}")
+      IO.puts("Layer #{length(state.stack) - index - 1}: #{inspect(map)}")
     end)
 
     IO.puts("End of stack\n")
