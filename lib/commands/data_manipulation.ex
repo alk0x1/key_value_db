@@ -1,27 +1,26 @@
 defmodule Commands.DataManipulation do
   alias State
   alias Persistence, as: P
-  alias Utils
 
   def process(["SET" | args], state) do
     case tokenize_args(args) do
       [key, value] ->
-        parsed_key = Utils.parse_value(key)
-        parsed_value = Utils.parse_value(value)
+        parsed_key = parse_value(key)
+        parsed_value = parse_value(value)
 
-        new_state = Map.update!(state, :stack, fn stack ->
+        updated_state = Map.update!(state, :stack, fn stack ->
           [Map.put(List.first(stack), parsed_key, parsed_value) | List.delete_at(stack, 0)]
         end)
 
-        if length(new_state.stack) == 1 do
-          P.log_change({key, Utils.parse_value(value)})
+        if length(updated_state.stack) == 1 do
+          P.log_change({key, parse_value(value)})
         end
 
         # Only check if the key exist in the current state
         [current_state | _] = state.stack
         IO.puts("#{if Map.has_key?(current_state, parsed_key), do: "TRUE", else: "FALSE"} #{parsed_value}")
 
-        new_state
+        updated_state
 
       _ ->
         IO.puts(~s(ERR "SET <key> <value> - Syntax error"))
@@ -32,7 +31,7 @@ defmodule Commands.DataManipulation do
  def process(["GET" | args], state) do
     case tokenize_args(args) do
       [key] ->
-        parsed_key = Utils.parse_value(key)
+        parsed_key = parse_value(key)
 
         case find_in_stack(parsed_key, state.stack) do
           nil -> IO.puts("NIL")
@@ -48,10 +47,12 @@ defmodule Commands.DataManipulation do
   end
 
   def process(["LIST"], state) do
-    Utils.print_stack(state)
+    Enum.with_index(state.stack, fn map, index ->
+      IO.puts("Layer #{length(state.stack) - index - 1}: #{inspect(map)}")
+    end)
+
     state
   end
-
 
   defp tokenize_args(args) do
     args
@@ -73,4 +74,24 @@ defmodule Commands.DataManipulation do
       value -> value
     end
   end
+
+  defp parse_value(value) do
+    case value do
+      "TRUE" -> true
+      "FALSE" -> false
+      "NIL" -> nil
+      _ ->
+        cond do
+          String.match?(value, ~r/^\d+$/) -> String.to_integer(value)
+          # String with double quotes (handles escaping)
+          String.starts_with?(value, "\"") and String.ends_with?(value, "\"") ->
+            String.slice(value, 1..-2//1) |> String.replace("\\\"", "\"")
+          # String with single quotes (for keys with spaces or special characters)
+          String.starts_with?(value, "'") and String.ends_with?(value, "'") ->
+            String.slice(value, 1..-2//1) |> String.replace("\\'", "'")
+          true -> value
+        end
+    end
+  end
+
 end
