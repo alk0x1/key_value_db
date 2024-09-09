@@ -1,9 +1,9 @@
 defmodule CommandRouter do
   alias Commands.{Transaction, DataManipulation}
 
-  def process("BEGIN" = command, state), do: Transaction.process(command, state)
-  def process("COMMIT" = command, state), do: Transaction.process(command, state)
-  def process("ROLLBACK" = command, state), do: Transaction.process(command, state)
+  def process("BEGIN" <> _rest, state), do: Transaction.process("BEGIN", state)
+  def process("COMMIT" <> _rest, state), do: Transaction.process("COMMIT", state)
+  def process("ROLLBACK" <> _rest, state), do: Transaction.process("ROLLBACK", state)
 
   def process(command, state) do
     case String.split(command) do
