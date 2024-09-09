@@ -4,7 +4,7 @@ defmodule Commands.Transaction do
 
   def process("BEGIN", state) do
     new_state = State.push_context(state)
-    IO.puts("OK")
+    IO.puts(length(new_state.stack) - 1)
     new_state
   end
 
@@ -16,7 +16,7 @@ defmodule Commands.Transaction do
 
       _ ->
         new_state = State.merge_context(state)
-        IO.puts("OK")
+        IO.puts(length(new_state.stack) - 1)
 
         if length(new_state.stack) == 1 do
           P.compact_log(new_state)
@@ -34,7 +34,8 @@ defmodule Commands.Transaction do
 
       _ ->
         new_state = State.pop_context(state)
-        IO.puts("OK")
+        IO.puts(length(new_state.stack) - 1)
+
         new_state
     end
   end

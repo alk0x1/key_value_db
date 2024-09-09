@@ -18,7 +18,7 @@ defmodule CommandTest do
       new_state = CommandRouter.process("BEGIN", state)
       assert length(new_state.stack) == 2
     end)
-    assert output == "OK\n"
+    assert output == "1\n"
   end
 
   test "COMMIT command with transaction", %{state: _state} do
@@ -28,7 +28,7 @@ defmodule CommandTest do
       assert length(new_state.stack) == 1
       assert new_state.stack == [%{"key" => "value"}]
     end)
-    assert output == "OK\n"
+    assert output == "0\n"
   end
 
   test "COMMIT command without transaction", %{state: state} do
@@ -52,7 +52,7 @@ defmodule CommandTest do
       new_state = CommandRouter.process("SET key value", state)
       assert new_state.stack == [%{"key" => "value"}]
     end)
-    assert output == "OK\n"
+    assert output == "FALSE value\n"
   end
 
   test "SET command with quoted key and value", %{state: state} do
@@ -60,7 +60,7 @@ defmodule CommandTest do
       new_state = CommandRouter.process("SET 'quoted key' \"quoted value\"", state)
       assert new_state.stack == [%{"quoted key" => "quoted value"}]
     end)
-    assert output == "OK\n"
+    assert output == "FALSE quoted value\n"
   end
 
   test "SET command with integer value", %{state: state} do
@@ -68,7 +68,7 @@ defmodule CommandTest do
       new_state = CommandRouter.process("SET key 12345", state)
       assert new_state.stack == [%{"key" => 12345}]
     end)
-    assert output == "OK\n"
+    assert output == "FALSE 12345\n"
   end
 
   test "SET command with boolean value TRUE", %{state: state} do
@@ -76,7 +76,7 @@ defmodule CommandTest do
       new_state = CommandRouter.process("SET key TRUE", state)
       assert new_state.stack == [%{"key" => true}]
     end)
-    assert output == "OK\n"
+    assert output == "FALSE true\n"
   end
 
   test "SET command with boolean value FALSE", %{state: state} do
@@ -84,7 +84,7 @@ defmodule CommandTest do
       new_state = CommandRouter.process("SET key FALSE", state)
       assert new_state.stack == [%{"key" => false}]
     end)
-    assert output == "OK\n"
+    assert output == "FALSE false\n"
   end
 
   test "SET command with invalid syntax (too few arguments)", %{state: state} do
@@ -146,7 +146,7 @@ defmodule CommandTest do
       log_entries = Persistence.extract_log_entries(log_data)
       assert log_entries == [["key", "value"]]
     end)
-    assert output == "OK\n"
+    assert output == "FALSE value\n"
   end
 
   test "COMMIT command with persistence", %{state: state} do
@@ -161,7 +161,7 @@ defmodule CommandTest do
       assert persisted_state == %{"key" => "value"}
     end)
 
-    assert output == "OK\n"
+    assert output == "0\n"
   end
 
   test "GET command retrieves from log", %{state: state} do
